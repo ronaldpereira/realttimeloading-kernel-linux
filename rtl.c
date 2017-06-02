@@ -13,7 +13,7 @@ typedef struct
 
 int SIZE = 50;
 
-Command *databasereader()
+Command *databaseReader()
 {
     int i;
     Command *cmd;
@@ -27,10 +27,9 @@ Command *databasereader()
     for(i = 0; i < SIZE; i++)
     {
         fscanf(database, "%s %u ", cmd[i].cmd, &(cmd[i].count));
+
         if(strcmp(cmd[i].cmd, "") == 0)
             strcpy(cmd[i].cmd, "Empty");
-        else if(!(strcmp(cmd[i].cmd, "Empty") == 0))
-            printf("%s %d\n", cmd[i].cmd, cmd[i].count);
     }
 
     fclose(database);
@@ -38,7 +37,26 @@ Command *databasereader()
     return cmd;
 }
 
-int commandsearch(Command *cmd, char *command)
+void showDatabase(Command *cmd)
+{
+    int i;
+    FILE *database;
+
+    database = fopen("rtldatabase.txt", "r");
+
+    printf("\n\n---------- Database commands ----------\n");
+    printf("Command\t\t\t\tEvents\n\n");
+
+    for(i = 0; i < SIZE; i++)
+    {
+        if(!(strcmp(cmd[i].cmd, "Empty") == 0))
+            printf("%s\t\t\t\t  %d\n", cmd[i].cmd, cmd[i].count);
+    }
+
+    fclose(database);
+}
+
+int commandSearch(Command *cmd, char *command)
 {
     int i, firstfit = -1;
 
@@ -58,12 +76,12 @@ int commandsearch(Command *cmd, char *command)
     }
 
     if(firstfit == -1)
-        printf("ERROR: Full buffer, can't insert more commands. Please, delete some commands.\n");
+        printf("ERROR: Full database, can't insert more commands. Please, delete some commands or change the size of it.\n");
 
     return firstfit;
 }
 
-void databaseprinter(Command *cmd)
+void databasePrinter(Command *cmd)
 {
     FILE *database;
     int i;
@@ -78,7 +96,7 @@ void databaseprinter(Command *cmd)
     fclose(database);
 }
 
-Command *deletecommand(Command *cmd, char *command)
+Command *deleteCommand(Command *cmd, char *command)
 {
     int i;
 
@@ -97,22 +115,24 @@ Command *deletecommand(Command *cmd, char *command)
 
 Command *config()
 {
-    int i, position, qtd;
+    int i, position, qtd, option;
     Command *cmd;
     FILE *database;
-    char *command, *startcommand, *killcommand, option;
+    char *command, *startcommand, *killcommand;
 
     command = (char*) calloc(100,sizeof(char));
     startcommand = (char*) calloc(100,sizeof(char));
     killcommand = (char*) calloc(100,sizeof(char));
 
-    cmd = databasereader();
+    cmd = databaseReader();
 
-    printf("Insert the option: (i)nsert and execute a command / (d)elete a command / (c)lear the database and change the maximum size (default=50 processes)\n> ");
-    scanf(" %c", &option);
-    printf("%c\n", option);
+    printf("\n\n---------- Configuration menu ----------\n\nInsert the option:\n1 - Show the database saved commands\n2 - Insert and execute a command\n3 - Delete a command\n4 - Clear the database and change the maximum size (default=50 processes)\n\n> ");
+    scanf(" %d", &option);
 
-    if(option == 'i')
+    if(option == 1)
+        showDatabase(cmd);
+
+    else if(option == 2)
     {
         database = fopen("rtldatabase.txt", "r+w");
 
@@ -126,10 +146,10 @@ Command *config()
             fseek(database, SEEK_SET, 0);
             printf("Insira o comando %d:\n> ", i+1);
             scanf(" %[^\n]", command);
-            position = commandsearch(cmd, command);
+            position = commandSearch(cmd, command);
 
             if(position == -1)
-                return cmd;
+                goto _out;
 
             strcpy(cmd[position].cmd, command);
             cmd[position].count++;
@@ -151,32 +171,31 @@ Command *config()
         fclose(database);
     }
 
-    else if(option == 'd')
+    else if(option == 3)
     {
         printf("Insert the command you want to delete:\n> ");
         scanf("%s", command);
-        cmd = deletecommand(cmd, command);
+        cmd = deleteCommand(cmd, command);
     }
 
-    else if(option == 'c')
+    else if(option == 4)
     {
         database = fopen("rtldatabase.txt", "w");
+
         printf("Insert the new size of the database:\n> ");
         scanf(" %d", &SIZE);
 
         fprintf(database,"%d\n", SIZE);
 
         for(i = 0; i < SIZE; i++)
-        {
             fprintf(database, "Empty 0\n");
-        }
 
-        cmd = databasereader();
+        cmd = databaseReader();
+
+        fclose(database);
     }
 
-    databaseprinter(cmd);
-
-    fclose(database);
+    _out: databasePrinter(cmd);
 
     return cmd;
 }
@@ -221,7 +240,7 @@ int main(int argv, char *argc[])
 
     else
     {
-        cmd = databasereader();
+        cmd = databaseReader();
         rtl(database, cmd);
     }
 
