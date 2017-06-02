@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#define SIZE 50
 
 typedef struct
 {
@@ -12,19 +11,29 @@ typedef struct
     unsigned int count;
 } Command;
 
-Command *databasereader(FILE *database)
+int SIZE = 50;
+
+Command *databasereader()
 {
     int i;
     Command *cmd;
+    FILE *database;
 
+    database = fopen("rtldatabase.txt", "r");
+
+    fscanf(database, "%d", &SIZE);
     cmd = (Command*) calloc(SIZE,sizeof(Command));
 
     for(i = 0; i < SIZE; i++)
     {
         fscanf(database, "%s %u ", cmd[i].cmd, &(cmd[i].count));
-        if(!(strcmp(cmd[i].cmd, "Empty") == 0))
+        if(strcmp(cmd[i].cmd, "") == 0)
+            strcpy(cmd[i].cmd, "Empty");
+        else if(!(strcmp(cmd[i].cmd, "Empty") == 0))
             printf("%s %d\n", cmd[i].cmd, cmd[i].count);
     }
+
+    fclose(database);
 
     return cmd;
 }
@@ -61,6 +70,8 @@ void databaseprinter(Command *cmd)
 
     database = fopen("rtldatabase.txt", "w");
 
+    fprintf(database, "%d\n", SIZE);
+
     for(i = 0; i < SIZE; i++)
         fprintf(database, "%s %u\n", cmd[i].cmd, cmd[i].count);
 
@@ -91,19 +102,20 @@ Command *config()
     FILE *database;
     char *command, *startcommand, *killcommand, option;
 
-    database = fopen("rtldatabase.txt", "r+w");
-
     command = (char*) calloc(100,sizeof(char));
     startcommand = (char*) calloc(100,sizeof(char));
     killcommand = (char*) calloc(100,sizeof(char));
 
-    cmd = databasereader(database);
+    cmd = databasereader();
 
-    printf("Insert the option: (i)nsert and execute a command / (d)elete a command\n> ");
-    scanf("%c", &option);
+    printf("Insert the option: (i)nsert and execute a command / (d)elete a command / (c)lear the database and change the maximum size (default=50 processes)\n> ");
+    scanf(" %c", &option);
+    printf("%c\n", option);
 
     if(option == 'i')
     {
+        database = fopen("rtldatabase.txt", "r+w");
+
         printf("Insira quantos comandos deseja inserir:\n> ");
         scanf("%d", &qtd);
 
@@ -127,7 +139,7 @@ Command *config()
             strcat(startcommand, " &");
             system(startcommand);
 
-            sleep(0.5); // 0.5 seconds wait
+            sleep(0.75); // 0.75 seconds wait
 
             strcat(killcommand, "killall ");
             strcat(killcommand, cmd[position].cmd);
@@ -135,6 +147,8 @@ Command *config()
             printf("Killing process %s\n", killcommand);
             system(killcommand);
         }
+
+        fclose(database);
     }
 
     else if(option == 'd')
@@ -142,6 +156,22 @@ Command *config()
         printf("Insert the command you want to delete:\n> ");
         scanf("%s", command);
         cmd = deletecommand(cmd, command);
+    }
+
+    else if(option == 'c')
+    {
+        database = fopen("rtldatabase.txt", "w");
+        printf("Insert the new size of the database:\n> ");
+        scanf(" %d", &SIZE);
+
+        fprintf(database,"%d\n", SIZE);
+
+        for(i = 0; i < SIZE; i++)
+        {
+            fprintf(database, "Empty 0\n");
+        }
+
+        cmd = databasereader();
     }
 
     databaseprinter(cmd);
@@ -163,6 +193,8 @@ void init()
 
     database = fopen("rtldatabase.txt", "w");
 
+    fprintf(database, "%d\n", SIZE);
+
     for(i = 0; i < SIZE; i++)
         fprintf(database, "Empty 0\n");
 }
@@ -176,20 +208,20 @@ int main(int argv, char *argc[])
 
     if(strcmp(argc[1], "init") == 0)
     {
-        printf("Initializing Real-Time Loading database file\n");
+        printf("Initializing Real-Time Loading database file...\n");
         init();
         printf("Real-Time Loading ready\n");
     }
 
     else if(strcmp(argc[1], "config") == 0)
     {
-        printf("Welcome to Real-Time Loading configuration!\n");
+        printf("Welcome to Real-Time Loading configuration.\n");
         cmd = config();
     }
 
     else
     {
-        cmd = databasereader(database);
+        cmd = databasereader();
         rtl(database, cmd);
     }
 
