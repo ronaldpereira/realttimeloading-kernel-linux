@@ -19,7 +19,7 @@ Command *databaseReader()
     Command *cmd;
     FILE *database;
 
-    database = fopen("rtldatabase.txt", "r");
+    database = fopen(".rtldatabase.db", "r");
 
     fscanf(database, "%d", &SIZE);
     cmd = (Command*) calloc(SIZE,sizeof(Command));
@@ -42,7 +42,7 @@ void showDatabase(Command *cmd)
     int i;
     FILE *database;
 
-    database = fopen("rtldatabase.txt", "r");
+    database = fopen(".rtldatabase.db", "r");
 
     printf("\n\n---------- Database commands ----------\n");
     printf("Events\t\t\t\tCommands\n\n");
@@ -86,7 +86,7 @@ void databasePrinter(Command *cmd)
     FILE *database;
     int i;
 
-    database = fopen("rtldatabase.txt", "w");
+    database = fopen(".rtldatabase.db", "w");
 
     fprintf(database, "%d\n", SIZE);
 
@@ -136,7 +136,7 @@ Command *config()
 
         else if(option == 2)
         {
-            database = fopen("rtldatabase.txt", "r+w");
+            database = fopen(".rtldatabase.db", "r+w");
 
             printf("Insira quantos comandos deseja inserir:\n> ");
             scanf("%d", &qtd);
@@ -182,7 +182,7 @@ Command *config()
 
         else if(option == 4)
         {
-            database = fopen("rtldatabase.txt", "w");
+            database = fopen(".rtldatabase.db", "w");
 
             printf("Insert the new size of the database:\n> ");
             scanf(" %d", &SIZE);
@@ -214,7 +214,7 @@ void init()
     int i;
     FILE *database;
 
-    database = fopen("rtldatabase.txt", "w");
+    database = fopen(".rtldatabase.db", "w");
 
     fprintf(database, "%d\n", SIZE);
 
@@ -232,18 +232,26 @@ int main(int argv, char *argc[])
     Command *cmd;
     FILE *database;
 
-    system("ps -A > actualprocesses.txt");
+    system("ps -A > .actualprocesses.txt");
+
+    printf("\n\n");
+    printf("*********************\n");
+    printf("*                   *\n");
+    printf("* Real-Time Loading *\n");
+    printf("*                   *\n");
+    printf("*********************\n");
+
 
     if(strcmp(argc[1], "init") == 0)
     {
-        printf("Initializing Real-Time Loading database file...\n");
+        printf("\nInitializing Real-Time Loading database file...\n");
         init();
-        printf("Real-Time Loading ready\n");
+        printf("Real-Time Loading ready!\n");
     }
 
     else if(strcmp(argc[1], "config") == 0)
     {
-        printf("Welcome to Real-Time Loading configuration.\n");
+        printf("\nWelcome to Real-Time Loading configuration.\n");
         cmd = config();
     }
 
