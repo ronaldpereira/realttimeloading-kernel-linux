@@ -7,7 +7,7 @@
 
 typedef struct
 {
-    char cmd[100];
+    char cmd[100000];
     unsigned int count;
 } Command;
 
@@ -45,12 +45,12 @@ void showDatabase(Command *cmd)
     database = fopen("rtldatabase.txt", "r");
 
     printf("\n\n---------- Database commands ----------\n");
-    printf("Command\t\t\t\tEvents\n\n");
+    printf("Events\t\t\t\tCommands\n\n");
 
     for(i = 0; i < SIZE; i++)
     {
         if(!(strcmp(cmd[i].cmd, "Empty") == 0))
-            printf("%s\t\t\t\t  %d\n", cmd[i].cmd, cmd[i].count);
+            printf("%d\t\t\t\t%s\n\n", cmd[i].count, cmd[i].cmd);
     }
 
     fclose(database);
@@ -115,94 +115,98 @@ Command *deleteCommand(Command *cmd, char *command)
 
 Command *config()
 {
-    int i, position, qtd, option;
+    int i, position, qtd, option = 1;
     Command *cmd;
     FILE *database;
     char *command, *startcommand, *killcommand;
 
-    command = (char*) calloc(100,sizeof(char));
-    startcommand = (char*) calloc(100,sizeof(char));
-    killcommand = (char*) calloc(100,sizeof(char));
+    command = (char*) calloc(100000,sizeof(char));
+    startcommand = (char*) calloc(100000,sizeof(char));
+    killcommand = (char*) calloc(100000,sizeof(char));
 
-    cmd = databaseReader();
-
-    printf("\n\n---------- Configuration menu ----------\n\nInsert the option:\n1 - Show the database saved commands\n2 - Insert and execute a command\n3 - Delete a command\n4 - Clear the database and change the maximum size (default=50 processes)\n\n> ");
-    scanf(" %d", &option);
-
-    if(option == 1)
-        showDatabase(cmd);
-
-    else if(option == 2)
+    while(option != 0)
     {
-        database = fopen("rtldatabase.txt", "r+w");
-
-        printf("Insira quantos comandos deseja inserir:\n> ");
-        scanf("%d", &qtd);
-
-        for(i = 0; i < qtd; i++)
-        {
-            startcommand[0] = '\0';
-            killcommand[0] = '\0';
-            fseek(database, SEEK_SET, 0);
-            printf("Insira o comando %d:\n> ", i+1);
-            scanf(" %[^\n]", command);
-            position = commandSearch(cmd, command);
-
-            if(position == -1)
-                goto _out;
-
-            strcpy(cmd[position].cmd, command);
-            cmd[position].count++;
-
-            printf("'%s' is starting\n", cmd[position].cmd);
-            strcat(startcommand, cmd[position].cmd);
-            strcat(startcommand, " &");
-            system(startcommand);
-
-            sleep(0.75); // 0.75 seconds wait
-
-            strcat(killcommand, "killall ");
-            strcat(killcommand, cmd[position].cmd);
-
-            printf("Killing process %s\n", killcommand);
-            system(killcommand);
-        }
-
-        fclose(database);
-    }
-
-    else if(option == 3)
-    {
-        printf("Insert the command you want to delete:\n> ");
-        scanf("%s", command);
-        cmd = deleteCommand(cmd, command);
-    }
-
-    else if(option == 4)
-    {
-        database = fopen("rtldatabase.txt", "w");
-
-        printf("Insert the new size of the database:\n> ");
-        scanf(" %d", &SIZE);
-
-        fprintf(database,"%d\n", SIZE);
-
-        for(i = 0; i < SIZE; i++)
-            fprintf(database, "Empty 0\n");
-
         cmd = databaseReader();
 
-        fclose(database);
+        printf("\n\n---------- Configuration menu ----------\n\nInsert the option:\n1 - Show the database saved commands\n2 - Insert and execute a command\n3 - Delete a command\n4 - Clear the database and change the maximum size (actual size = %d processes)\n0 - Exit the configuration program\n\n> ", SIZE);
+        scanf(" %d", &option);
+
+        if(option == 1)
+            showDatabase(cmd);
+
+        else if(option == 2)
+        {
+            database = fopen("rtldatabase.txt", "r+w");
+
+            printf("Insira quantos comandos deseja inserir:\n> ");
+            scanf("%d", &qtd);
+
+            for(i = 0; i < qtd; i++)
+            {
+                startcommand[0] = '\0';
+                killcommand[0] = '\0';
+                fseek(database, SEEK_SET, 0);
+                printf("Insira o comando %d:\n> ", i+1);
+                scanf(" %[^\n]", command);
+                position = commandSearch(cmd, command);
+
+                if(position == -1)
+                    goto _out;
+
+                strcpy(cmd[position].cmd, command);
+                cmd[position].count++;
+
+                printf("'%s' is starting\n", cmd[position].cmd);
+                strcat(startcommand, cmd[position].cmd);
+                strcat(startcommand, " &");
+                system(startcommand);
+
+                sleep(0.75); // 0.75 seconds wait
+
+                strcat(killcommand, "killall ");
+                strcat(killcommand, cmd[position].cmd);
+
+                printf("Killing process %s\n", killcommand);
+                system(killcommand);
+            }
+
+            fclose(database);
+        }
+
+        else if(option == 3)
+        {
+            printf("Insert the command you want to delete:\n> ");
+            scanf("%s", command);
+            cmd = deleteCommand(cmd, command);
+        }
+
+        else if(option == 4)
+        {
+            database = fopen("rtldatabase.txt", "w");
+
+            printf("Insert the new size of the database:\n> ");
+            scanf(" %d", &SIZE);
+
+            while(SIZE < 1)
+            {
+                printf("Invalid size.\nInsert the new size of the database:\n> ");
+                scanf(" %d", &SIZE);
+            }
+
+            fprintf(database,"%d\n", SIZE);
+
+            for(i = 0; i < SIZE; i++)
+                fprintf(database, "Empty 0\n");
+
+            cmd = databaseReader();
+
+            fclose(database);
+        }
+
+        _out: databasePrinter(cmd);
     }
 
-    _out: databasePrinter(cmd);
-
     return cmd;
-}
-
-void rtl(FILE *database, Command *cmd)
-{
-
 }
 
 void init()
@@ -215,7 +219,12 @@ void init()
     fprintf(database, "%d\n", SIZE);
 
     for(i = 0; i < SIZE; i++)
-        fprintf(database, "Empty 0\n");
+    fprintf(database, "Empty 0\n");
+}
+
+void rtl(FILE *database, Command *cmd)
+{
+
 }
 
 int main(int argv, char *argc[])
