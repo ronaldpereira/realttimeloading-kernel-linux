@@ -232,7 +232,7 @@ int main(int argv, char *argc[])
     Command *cmd;
     FILE *database;
 
-    system("ps -A > .actualprocesses.txt");
+    // system("ps -A > .actualprocesses.txt");
 
     printf("\n\n");
     printf("*********************\n");
