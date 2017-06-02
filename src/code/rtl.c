@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 typedef struct
@@ -113,7 +114,7 @@ Command *deleteCommand(Command *cmd, char *command)
     return cmd;
 }
 
-Command *config()
+void config()
 {
     int i, position, qtd, option = 1;
     Command *cmd;
@@ -128,7 +129,7 @@ Command *config()
     {
         cmd = databaseReader();
 
-        printf("\n\n---------- Configuration menu ----------\n\nInsert the option:\n1 - Show the database saved commands\n2 - Insert and execute a command\n3 - Delete a command\n4 - Clear the database and change the maximum size (actual size = %d processes)\n0 - Exit the configuration program\n\n> ", SIZE);
+        printf("\n\n---------- Configuration menu ----------\n\nInsert the option:\n1 - Show the database saved commands\n2 - Load all processes\n3 - Insert commands\n4 - Delete a command\n5 - Clear the database and change the maximum size (actual size = %d processes)\n0 - Exit the configuration program\n\n> ", SIZE);
         scanf(" %d", &option);
 
         if(option == 1)
@@ -136,13 +137,44 @@ Command *config()
 
         else if(option == 2)
         {
-            database = fopen(".rtldatabase.db", "r+w");
+            cmd = databaseReader();
 
-            printf("Insira quantos comandos deseja inserir:\n> ");
+            for(i = 0; i < SIZE; i++)
+            {
+                if(!(strcmp(cmd[i].cmd, "Empty") == 0))
+                {
+                    startcommand[0] = '\0';
+                    killcommand[0] = '\0';
+
+                    printf("'%s' is starting\n", cmd[i].cmd);
+                    strcat(startcommand, cmd[i].cmd);
+                    strcat(startcommand, " &");
+                    system(startcommand);
+
+                    sleep(0.75); // 0.75 seconds wait
+
+                    strcat(killcommand, "killall ");
+                    strcat(killcommand, cmd[i].cmd);
+
+                    printf("Killing process %s\n", killcommand);
+                    system(killcommand);
+                    cmd[i].count++;
+                }
+            }
+
+            databasePrinter(cmd);
+        }
+
+        else if(option == 3)
+        {
+
+            printf("\nInsira quantos comandos deseja inserir:\n> ");
             scanf("%d", &qtd);
 
             for(i = 0; i < qtd; i++)
             {
+                database = fopen(".rtldatabase.db", "r+w");
+
                 startcommand[0] = '\0';
                 killcommand[0] = '\0';
                 fseek(database, SEEK_SET, 0);
@@ -151,36 +183,34 @@ Command *config()
                 position = commandSearch(cmd, command);
 
                 if(position == -1)
-                    goto _out;
+                {
+                    time_t timestamp;
+                    time(&timestamp);
+                    FILE *log;
+                    log = fopen("rtllog.txt", "a");
+                    fprintf(log, "%s - ERROR: Command '%s' couldn't be added to the database. Database was full.\n\n", ctime(&timestamp), command);
+                    fclose(log);
+                }
 
-                strcpy(cmd[position].cmd, command);
-                cmd[position].count++;
+                else
+                {
+                    strcpy(cmd[position].cmd, command);
+                    cmd[position].count++;
+                }
 
-                printf("'%s' is starting\n", cmd[position].cmd);
-                strcat(startcommand, cmd[position].cmd);
-                strcat(startcommand, " &");
-                system(startcommand);
-
-                sleep(0.75); // 0.75 seconds wait
-
-                strcat(killcommand, "killall ");
-                strcat(killcommand, cmd[position].cmd);
-
-                printf("Killing process %s\n", killcommand);
-                system(killcommand);
+                databasePrinter(cmd);
+                fclose(database);
             }
-
-            fclose(database);
         }
 
-        else if(option == 3)
+        else if(option == 4)
         {
             printf("Insert the command you want to delete:\n> ");
             scanf("%s", command);
             cmd = deleteCommand(cmd, command);
         }
 
-        else if(option == 4)
+        else if(option == 5)
         {
             database = fopen(".rtldatabase.db", "w");
 
@@ -200,13 +230,15 @@ Command *config()
 
             cmd = databaseReader();
 
+            databasePrinter(cmd);
+
             fclose(database);
         }
-
-        _out: databasePrinter(cmd);
     }
 
-    return cmd;
+    free(command);
+    free(startcommand);
+    free(killcommand);
 }
 
 void init()
@@ -222,16 +254,47 @@ void init()
     fprintf(database, "Empty 0\n");
 }
 
-void rtl(FILE *database, Command *cmd)
+void rtl()
 {
+    int i;
+    char *startcommand, *killcommand;
+    Command *cmd;
 
+    startcommand = (char*) calloc(100000,sizeof(char));
+    killcommand = (char*) calloc(100000,sizeof(char));
+
+    cmd = databaseReader();
+
+    for(i = 0; i < SIZE; i++)
+    {
+        if(!(strcmp(cmd[i].cmd, "Empty") == 0))
+        {
+            startcommand[0] = '\0';
+            killcommand[0] = '\0';
+
+            printf("'%s' is starting\n", cmd[i].cmd);
+            strcat(startcommand, cmd[i].cmd);
+            strcat(startcommand, " &");
+            system(startcommand);
+
+            sleep(1); // 1 seconds wait
+
+            strcat(killcommand, "killall ");
+            strcat(killcommand, cmd[i].cmd);
+
+            printf("Killing process %s\n", killcommand);
+            system(killcommand);
+            cmd[i].count++;
+        }
+    }
+
+    free(startcommand);
+    free(killcommand);
+    databasePrinter(cmd);
 }
 
 int main(int argv, char *argc[])
 {
-    Command *cmd;
-    FILE *database;
-
     // system("ps -A > .actualprocesses.txt");
 
     printf("\n\n");
@@ -242,7 +305,14 @@ int main(int argv, char *argc[])
     printf("*********************\n");
 
 
-    if(strcmp(argc[1], "init") == 0)
+    if(argc[1] == NULL)
+    {
+        printf("\nExecuting Real-Time Loading. Please wait...\n");
+        rtl();
+        printf("\nReal-Time Loading ended\n");
+    }
+
+    else if(strcmp(argc[1], "init") == 0)
     {
         printf("\nInitializing Real-Time Loading database file...\n");
         init();
@@ -252,13 +322,7 @@ int main(int argv, char *argc[])
     else if(strcmp(argc[1], "config") == 0)
     {
         printf("\nWelcome to Real-Time Loading configuration.\n");
-        cmd = config();
-    }
-
-    else
-    {
-        cmd = databaseReader();
-        rtl(database, cmd);
+        config();
     }
 
 	return 0;
