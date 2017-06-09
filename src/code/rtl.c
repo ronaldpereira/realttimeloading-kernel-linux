@@ -9,10 +9,23 @@
 typedef struct
 {
     char cmd[100000];
-    unsigned int count;
+    unsigned int events;
 } Command;
 
 int SIZE = 50;
+
+void init()
+{
+    int i;
+    FILE *database;
+
+    database = fopen(".rtldatabase.db", "w");
+
+    fprintf(database, "%d\n", SIZE);
+
+    for(i = 0; i < SIZE; i++)
+    fprintf(database, "Empty 0\n");
+}
 
 Command *databaseReader()
 {
@@ -22,12 +35,18 @@ Command *databaseReader()
 
     database = fopen(".rtldatabase.db", "r");
 
+    if(database == NULL)
+    {
+        printf("\nERROR: Database was not found. Please, type 'make init' before configuring the database.\n");
+        exit(0);
+    }
+
     fscanf(database, "%d", &SIZE);
     cmd = (Command*) calloc(SIZE,sizeof(Command));
 
     for(i = 0; i < SIZE; i++)
     {
-        fscanf(database, "%s %u ", cmd[i].cmd, &(cmd[i].count));
+        fscanf(database, "%s %u ", cmd[i].cmd, &(cmd[i].events));
 
         if(strcmp(cmd[i].cmd, "") == 0)
             strcpy(cmd[i].cmd, "Empty");
@@ -51,7 +70,7 @@ void showDatabase(Command *cmd)
     for(i = 0; i < SIZE; i++)
     {
         if(!(strcmp(cmd[i].cmd, "Empty") == 0))
-            printf("%d\t\t\t\t%s\n\n", cmd[i].count, cmd[i].cmd);
+            printf("%d\t\t\t\t%s\n\n", cmd[i].events, cmd[i].cmd);
     }
 
     fclose(database);
@@ -65,13 +84,13 @@ int commandSearch(Command *cmd, char *command)
     {
         if(strcmp(cmd[i].cmd, command) == 0)
         {
-            printf("%s found at line %d\n", cmd[i].cmd, i);
+            printf("Command '%s' was already inserted in the database. Added +1 event to it.\n", cmd[i].cmd);
             return i;
         }
 
         else if((strcmp(cmd[i].cmd, "Empty") == 0) && firstfit == -1)
         {
-            printf("No command found at size %d\n", i);
+            printf("Command '%s' was succesfully inserted in database line %d\n", command, i);
             firstfit = i;
         }
     }
@@ -92,7 +111,7 @@ void databasePrinter(Command *cmd)
     fprintf(database, "%d\n", SIZE);
 
     for(i = 0; i < SIZE; i++)
-        fprintf(database, "%s %u\n", cmd[i].cmd, cmd[i].count);
+        fprintf(database, "%s %u\n", cmd[i].cmd, cmd[i].events);
 
     fclose(database);
 }
@@ -106,12 +125,32 @@ Command *deleteCommand(Command *cmd, char *command)
         if(strcmp(cmd[i].cmd, command) == 0)
         {
             strcpy(cmd[i].cmd, "Empty");
-            cmd[i].count = 0;
+            cmd[i].events = 0;
+            printf("Command '%s' was deleted from the database\n", command);
             return cmd;
         }
     }
 
+    printf("The command was not found in database.\n");
+
     return cmd;
+}
+
+void logPrinter()
+{
+    FILE *logs;
+    char *str;
+
+    logs = fopen("rtllog.txt", "r");
+    str = (char*) malloc(100000*sizeof(char));
+
+    printf("\n\n---------- Error Logs ----------\n\n");
+
+    while(fscanf(logs, " %[^\n]", str) != EOF)
+        printf("%s\n", str);
+
+    free(str);
+    fclose(logs);
 }
 
 void config()
@@ -129,11 +168,17 @@ void config()
     {
         cmd = databaseReader();
 
-        printf("\n\n---------- Configuration menu ----------\n\nInsert the option:\n1 - Show the database saved commands\n2 - Load all processes\n3 - Insert commands\n4 - Delete a command\n5 - Clear the database and change the maximum size (actual size = %d processes)\n0 - Exit the configuration program\n\n> ", SIZE);
+        printf("\n\n---------- Configuration menu ----------\n\nInsert the option:\n1 - Show the database saved commands\n2 - Load all processes\n3 - Insert commands\n4 - Delete a command\n5 - Clear the database and change the maximum size (actual size = %d processes)\n6 - Show the error logs\n0 - Exit the configuration program\n\n> ", SIZE);
         scanf(" %d", &option);
 
         if(option == 1)
+        {
             showDatabase(cmd);
+            printf("Press enter to continue...");
+            getchar();
+            getchar();
+            fflush(stdin);
+        }
 
         else if(option == 2)
         {
@@ -158,11 +203,15 @@ void config()
 
                     printf("Killing process %s\n", killcommand);
                     system(killcommand);
-                    cmd[i].count++;
+                    cmd[i].events++;
                 }
             }
 
             databasePrinter(cmd);
+            printf("Press enter to continue...");
+            getchar();
+            getchar();
+            fflush(stdin);
         }
 
         else if(option == 3)
@@ -195,19 +244,30 @@ void config()
                 else
                 {
                     strcpy(cmd[position].cmd, command);
-                    cmd[position].count++;
+                    cmd[position].events++;
                 }
 
                 databasePrinter(cmd);
                 fclose(database);
+
+                printf("Press enter to continue...");
+                getchar();
+                getchar();
+                fflush(stdin);
             }
         }
 
         else if(option == 4)
         {
+            showDatabase(cmd);
             printf("Insert the command you want to delete:\n> ");
             scanf("%s", command);
             cmd = deleteCommand(cmd, command);
+	        databasePrinter(cmd);
+            printf("Press enter to continue...");
+            getchar();
+            getchar();
+            fflush(stdin);
         }
 
         else if(option == 5)
@@ -234,24 +294,29 @@ void config()
 
             fclose(database);
         }
+
+        else if(option == 6)
+        {
+            logPrinter();
+            printf("Press enter to continue...");
+            getchar();
+            getchar();
+            fflush(stdin);
+        }
+
+        else if(option != 0)
+        {
+            printf("Invalid option.\n");
+            printf("Press enter to continue...");
+            getchar();
+            getchar();
+            fflush(stdin);
+        }
     }
 
     free(command);
     free(startcommand);
     free(killcommand);
-}
-
-void init()
-{
-    int i;
-    FILE *database;
-
-    database = fopen(".rtldatabase.db", "w");
-
-    fprintf(database, "%d\n", SIZE);
-
-    for(i = 0; i < SIZE; i++)
-    fprintf(database, "Empty 0\n");
 }
 
 void rtl()
@@ -284,7 +349,7 @@ void rtl()
 
             printf("Killing process %s\n", killcommand);
             system(killcommand);
-            cmd[i].count++;
+            cmd[i].events++;
         }
     }
 
