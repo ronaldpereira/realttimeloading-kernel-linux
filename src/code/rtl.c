@@ -130,9 +130,16 @@ Command *deleteCommand(Command *cmd, char *command)
             return cmd;
         }
     }
-
+   
     printf("The command was not found in database.\n");
 
+    time_t timestamp;
+    time(&timestamp);
+    FILE *log;
+    log = fopen("rtllog.txt", "a");
+    fprintf(log, "%s - ERROR: Command '%s' couldn't be added to the database. Database was full.\n\n", ctime(&timestamp), command);
+    fclose(log);
+    
     return cmd;
 }
 
