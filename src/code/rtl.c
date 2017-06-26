@@ -6,8 +6,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#define TIME 1 // Time waiting to kill the process
-
 typedef struct
 {
     char cmd[100000];
