@@ -6,6 +6,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#define TIME 1 // Time waiting to kill the process
+
 typedef struct
 {
     char cmd[100000];
@@ -90,7 +92,7 @@ int commandSearch(Command *cmd, char *command)
 
         else if((strcmp(cmd[i].cmd, "Empty") == 0) && firstfit == -1)
         {
-            printf("Command '%s' was succesfully inserted in database line %d\n", command, i);
+            printf("Command '%s' was succesfully inserted in database.\n", command);
             firstfit = i;
         }
     }
@@ -130,16 +132,16 @@ Command *deleteCommand(Command *cmd, char *command)
             return cmd;
         }
     }
-   
+
     printf("The command was not found in database.\n");
 
     time_t timestamp;
     time(&timestamp);
     FILE *log;
-    log = fopen("rtllog.txt", "a");
+    log = fopen(".rtllog.txt", "a");
     fprintf(log, "%s - ERROR: Command '%s' couldn't be added to the database. Database was full.\n\n", ctime(&timestamp), command);
     fclose(log);
-    
+
     return cmd;
 }
 
@@ -148,7 +150,7 @@ void logPrinter()
     FILE *logs;
     char *str;
 
-    logs = fopen("rtllog.txt", "r");
+    logs = fopen(".rtllog.txt", "r");
     str = (char*) malloc(100000*sizeof(char));
 
     printf("\n\n---------- Error Logs ----------\n\n");
@@ -165,10 +167,11 @@ void config()
     int i, position, qtd, option = 1;
     Command *cmd;
     FILE *database;
-    char *command, *startcommand, *killcommand;
+    char *command, *startcommand, *waitingstartcommand, *killcommand;
 
     command = (char*) calloc(100000,sizeof(char));
     startcommand = (char*) calloc(100000,sizeof(char));
+    waitingstartcommand = (char*) calloc(100000,sizeof(char));
     killcommand = (char*) calloc(100000,sizeof(char));
 
     while(option != 0)
@@ -196,6 +199,7 @@ void config()
                 if(!(strcmp(cmd[i].cmd, "Empty") == 0))
                 {
                     startcommand[0] = '\0';
+                    waitingstartcommand[0] = '\0';
                     killcommand[0] = '\0';
 
                     printf("'%s' is starting\n", cmd[i].cmd);
@@ -203,7 +207,10 @@ void config()
                     strcat(startcommand, " &");
                     system(startcommand);
 
-                    sleep(0.75); // 0.75 seconds wait
+                    strcat(waitingstartcommand, "until pids=$(pidof ");
+                    strcat(waitingstartcommand, cmd[i].cmd);
+                    strcat(waitingstartcommand, "); do   sleep 0.1; done");
+                    system(waitingstartcommand);
 
                     strcat(killcommand, "killall ");
                     strcat(killcommand, cmd[i].cmd);
@@ -243,7 +250,7 @@ void config()
                     time_t timestamp;
                     time(&timestamp);
                     FILE *log;
-                    log = fopen("rtllog.txt", "a");
+                    log = fopen(".rtllog.txt", "a");
                     fprintf(log, "%s - ERROR: Command '%s' couldn't be added to the database. Database was full.\n\n", ctime(&timestamp), command);
                     fclose(log);
                 }
@@ -323,16 +330,18 @@ void config()
 
     free(command);
     free(startcommand);
+    free(waitingstartcommand);
     free(killcommand);
 }
 
 void rtl()
 {
     int i;
-    char *startcommand, *killcommand;
+    char *startcommand, *waitingstartcommand, *killcommand;
     Command *cmd;
 
     startcommand = (char*) calloc(100000,sizeof(char));
+    waitingstartcommand = (char*) calloc(100000,sizeof(char));
     killcommand = (char*) calloc(100000,sizeof(char));
 
     cmd = databaseReader();
@@ -342,6 +351,7 @@ void rtl()
         if(!(strcmp(cmd[i].cmd, "Empty") == 0))
         {
             startcommand[0] = '\0';
+            waitingstartcommand = '\0';
             killcommand[0] = '\0';
 
             printf("'%s' is starting\n", cmd[i].cmd);
@@ -349,7 +359,10 @@ void rtl()
             strcat(startcommand, " &");
             system(startcommand);
 
-            sleep(1); // 1 seconds wait
+            strcat(waitingstartcommand, "until pids=$(pidof ");
+            strcat(waitingstartcommand, cmd[i].cmd);
+            strcat(waitingstartcommand, "); do   sleep 0.1; done");
+            system(waitingstartcommand);
 
             strcat(killcommand, "killall ");
             strcat(killcommand, cmd[i].cmd);
@@ -361,14 +374,13 @@ void rtl()
     }
 
     free(startcommand);
+    free(waitingstartcommand);
     free(killcommand);
     databasePrinter(cmd);
 }
 
 int main(int argv, char *argc[])
 {
-    // system("ps -A > .actualprocesses.txt");
-
     printf("\n\n");
     printf("*********************\n");
     printf("*                   *\n");
