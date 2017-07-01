@@ -1,0 +1,4 @@
+make
+(created a rtl.ko) (linux kernel object)
+mkdir linux-kernel/kernel/rtl && cp rtl.ko linux-kernel/kernel/rtl
+cd linux-kernel/kernel/rtl

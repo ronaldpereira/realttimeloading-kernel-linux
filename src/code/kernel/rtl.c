@@ -5,6 +5,13 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <linux/module.h> // Included for all Linux Modules
+#include <linux/kernel.h> // Included for KERN_INFO
+#include <linux/init.h> // Included for __init and __exit macros
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Ronald Pereira");
+MODULE_DESCRIPTION("Real-Time Loading Module");
 
 typedef struct
 {
@@ -149,13 +156,13 @@ void logPrinter()
     char *str;
 
     logs = fopen(".rtllog.txt", "r");
-    
+
     if(logs == NULL)
     {
         printf("Any errors was detected, so the Real-Time Loading log file isn't created.\n");
         return;
     }
-    
+
     str = (char*) malloc(100000*sizeof(char));
 
     printf("\n\n---------- Error Logs ----------\n\n");
@@ -384,25 +391,24 @@ void rtl()
     databasePrinter(cmd);
 }
 
-int main(int argv, char *argc[])
+static int __init rtl_init(int argv, char *argc[])
 {
-    printf("\n\n");
-    printf("*********************\n");
-    printf("*                   *\n");
-    printf("* Real-Time Loading *\n");
-    printf("*                   *\n");
-    printf("*********************\n");
-
-
     if(argc[1] == NULL)
     {
-        printf("\nExecuting Real-Time Loading. Please wait...\n");
+        printk(KERN_INFO "\nExecuting Real-Time Loading. Please wait...\n");
         rtl();
-        printf("\nReal-Time Loading ended\n");
+        printk(KERN_INFO "\nReal-Time Loading ended\n");
     }
 
     else if(strcmp(argc[1], "init") == 0)
     {
+        printf("\n\n");
+        printf("*********************\n");
+        printf("*                   *\n");
+        printf("* Real-Time Loading *\n");
+        printf("*                   *\n");
+        printf("*********************\n");
+
         printf("\nInitializing Real-Time Loading database file...\n");
         init();
         printf("Real-Time Loading ready!\n");
@@ -410,9 +416,24 @@ int main(int argv, char *argc[])
 
     else if(strcmp(argc[1], "config") == 0)
     {
+        printf("\n\n");
+        printf("*********************\n");
+        printf("*                   *\n");
+        printf("* Real-Time Loading *\n");
+        printf("*                   *\n");
+        printf("*********************\n");
+
         printf("\nWelcome to Real-Time Loading configuration.\n");
         config();
     }
 
 	return 0;
 }
+
+static void __exit rtl_cleanup()
+{
+    printk(KERN_INFO "Cleaning up module\n");
+}
+
+module_init(rtl_init);
+module_exit(rtl_cleanup);
